@@ -67,4 +67,8 @@ contract DepositVault is EIP712 {
 
         emit WithdrawalMade(depositToWithdraw.depositor, amount);
     }
+
+    function getDeposits() public view returns(Deposit[] memory){
+        return deposits;
+    }
 }
