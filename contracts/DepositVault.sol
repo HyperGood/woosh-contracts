@@ -6,6 +6,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract DepositVault is EIP712 {
     using ECDSA for bytes32;
@@ -30,12 +31,22 @@ contract DepositVault is EIP712 {
 
     constructor(string memory domainName, string memory domainVersion) EIP712(domainName, domainVersion) {}
 
-    function deposit() public payable {
-        require(msg.value > 0, "Deposit amount must be greater than 0");
+    function deposit(uint256 amount, address tokenAddress) public payable {
+        require(amount > 0 || msg.value > 0, "Deposit amount must be greater than 0");
+        if(msg.value > 0){
+            require(tokenAddress == address(0), "Token address must be 0x0 for ETH deposits");
+            uint256 depositIndex = deposits.length;
+            deposits.push(Deposit(payable(msg.sender), msg.value));
+            emit DepositMade(msg.sender, depositIndex, msg.value);
+        } else {
+            require(tokenAddress != address(0), "Token address must not be 0x0 for token deposits");
+            IERC20 token = IERC20(tokenAddress);
+            token.transferFrom(msg.sender, address(this), amount);
+            uint256 depositIndex = deposits.length;
+            deposits.push(Deposit(payable(msg.sender), amount));
+            emit DepositMade(msg.sender, depositIndex, amount);
 
-        uint256 depositIndex = deposits.length;
-        deposits.push(Deposit(payable(msg.sender), msg.value));
-        emit DepositMade(msg.sender, depositIndex, msg.value);
+        }
     }
 
     function getWithdrawalHash(Withdrawal memory withdrawal) public view returns (bytes32) {
@@ -71,7 +82,4 @@ contract DepositVault is EIP712 {
         emit WithdrawalMade(depositToWithdraw.depositor, amount);
     }
 
-    function getDeposits() public view returns(Deposit[] memory){
-        return deposits;
-    }
 }
