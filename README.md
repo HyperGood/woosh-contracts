@@ -1,6 +1,4 @@
-# HyperGood's Project M Contracts
-
-Written by @temo
+# HyperGood's Woosh Contracts
 
 Try running some of the following tasks:
 
