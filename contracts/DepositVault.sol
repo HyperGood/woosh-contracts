@@ -55,7 +55,7 @@ contract DepositVault is EIP712 {
         return _hashTypedDataV4(keccak256(abi.encode(WITHDRAWAL_TYPEHASH, withdrawal.amount, withdrawal.nonce)));
     }
 
-    function withdraw(uint256 amount, uint256 nonce, bytes memory signature, address payable recipient) public {
+    function withdraw(uint256 amount, uint256 nonce, bytes memory signature, address payable recipient, address tokenAddress) public {
         require(nonce < deposits.length, "Invalid deposit index");
         Deposit storage depositToWithdraw = deposits[nonce];
         bytes32 withdrawalHash = getWithdrawalHash(Withdrawal(amount, nonce));
@@ -66,12 +66,18 @@ contract DepositVault is EIP712 {
 
         usedWithdrawalHashes[withdrawalHash] = true;
         depositToWithdraw.amount = 0;
-        recipient.transfer(amount);
+        
+        if(tokenAddress == address(0)){
+            recipient.transfer(amount);
+        } else {
+            IERC20 token = IERC20(tokenAddress);
+            token.transfer(recipient, amount);
+        }
 
         emit WithdrawalMade(recipient, amount);
     }
 
-    function withdrawDeposit(uint256 depositIndex) public {
+    function withdrawDeposit(uint256 depositIndex, address tokenAddress) public {
         require(depositIndex < deposits.length, "Invalid deposit index");
         Deposit storage depositToWithdraw = deposits[depositIndex];
         require(depositToWithdraw.depositor == msg.sender, "Only the depositor can withdraw their deposit");
@@ -79,7 +85,14 @@ contract DepositVault is EIP712 {
 
         uint256 amount = depositToWithdraw.amount;
         depositToWithdraw.amount = 0;
-        depositToWithdraw.depositor.transfer(amount);
+
+        if(tokenAddress == address(0)){
+            depositToWithdraw.depositor.transfer(amount);
+        } else {
+            IERC20 token = IERC20(tokenAddress);
+            token.transfer(depositToWithdraw.depositor, amount);
+        }
+
 
         emit WithdrawalMade(depositToWithdraw.depositor, amount);
     }
