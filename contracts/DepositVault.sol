@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-///@title DepositVault Contract
-///@author @Temo_RH
+///@title Woosh DepositVault Contract
+///@author @Temo_RH https://github.com/ktemo
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 
 contract DepositVault is EIP712 {
     using ECDSA for bytes32;
@@ -14,6 +15,7 @@ contract DepositVault is EIP712 {
     struct Deposit {
         address payable depositor;
         uint256 amount;
+        address tokenAddress;
     }
 
     struct Withdrawal {
@@ -36,14 +38,14 @@ contract DepositVault is EIP712 {
         if(msg.value > 0){
             require(tokenAddress == address(0), "Token address must be 0x0 for ETH deposits");
             uint256 depositIndex = deposits.length;
-            deposits.push(Deposit(payable(msg.sender), msg.value));
+            deposits.push(Deposit(payable(msg.sender), msg.value, tokenAddress));
             emit DepositMade(msg.sender, depositIndex, msg.value);
         } else {
             require(tokenAddress != address(0), "Token address must not be 0x0 for token deposits");
             IERC20 token = IERC20(tokenAddress);
             token.transferFrom(msg.sender, address(this), amount);
             uint256 depositIndex = deposits.length;
-            deposits.push(Deposit(payable(msg.sender), amount));
+            deposits.push(Deposit(payable(msg.sender), amount, tokenAddress));
             emit DepositMade(msg.sender, depositIndex, amount);
 
         }
