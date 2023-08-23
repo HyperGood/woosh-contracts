@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-
 contract DepositVault is EIP712 {
     using ECDSA for bytes32;
 
@@ -28,7 +27,7 @@ contract DepositVault is EIP712 {
     mapping(bytes32 => bool) public usedWithdrawalHashes;
     bytes32 private constant WITHDRAWAL_TYPEHASH = keccak256("Withdrawal(uint256 amount,uint256 nonce)");
 
-    event DepositMade(address indexed depositor, uint256 indexed depositIndex, uint256 amount,         address tokenAddress);
+    event DepositMade(address indexed depositor, uint256 indexed depositIndex, uint256 amount, address tokenAddress);
     event WithdrawalMade(address indexed recipient, uint256 amount);
 
     constructor(string memory domainName, string memory domainVersion) EIP712(domainName, domainVersion) {}
@@ -97,5 +96,4 @@ contract DepositVault is EIP712 {
 
         emit WithdrawalMade(depositToWithdraw.depositor, amount);
     }
-
 }

@@ -49,7 +49,7 @@ describe('DepositVault', function () {
             })
          )
             .to.emit(depositVault, 'DepositMade')
-            .withArgs(addr1.address, 0, depositAmount);
+            .withArgs(addr1.address, 0, depositAmount, ZEROADDRESS);
 
          const deposit = await depositVault.deposits(0);
          expect(deposit.depositor).to.equal(addr1.address);
@@ -75,7 +75,7 @@ describe('DepositVault', function () {
             depositVault.connect(addr1).deposit(depositAmount, erc20.address)
          )
             .to.emit(depositVault, 'DepositMade')
-            .withArgs(addr1.address, 0, depositAmount);
+            .withArgs(addr1.address, 0, depositAmount, erc20.address);
 
          const deposit = await depositVault.deposits(0);
          expect(deposit.depositor).to.equal(addr1.address);
