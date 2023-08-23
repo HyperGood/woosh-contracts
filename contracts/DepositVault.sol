@@ -28,7 +28,7 @@ contract DepositVault is EIP712 {
     mapping(bytes32 => bool) public usedWithdrawalHashes;
     bytes32 private constant WITHDRAWAL_TYPEHASH = keccak256("Withdrawal(uint256 amount,uint256 nonce)");
 
-    event DepositMade(address indexed depositor, uint256 indexed depositIndex, uint256 amount);
+    event DepositMade(address indexed depositor, uint256 indexed depositIndex, uint256 amount,         address tokenAddress);
     event WithdrawalMade(address indexed recipient, uint256 amount);
 
     constructor(string memory domainName, string memory domainVersion) EIP712(domainName, domainVersion) {}
@@ -39,14 +39,14 @@ contract DepositVault is EIP712 {
             require(tokenAddress == address(0), "Token address must be 0x0 for ETH deposits");
             uint256 depositIndex = deposits.length;
             deposits.push(Deposit(payable(msg.sender), msg.value, tokenAddress));
-            emit DepositMade(msg.sender, depositIndex, msg.value);
+            emit DepositMade(msg.sender, depositIndex, msg.value, tokenAddress);
         } else {
             require(tokenAddress != address(0), "Token address must not be 0x0 for token deposits");
             IERC20 token = IERC20(tokenAddress);
             token.transferFrom(msg.sender, address(this), amount);
             uint256 depositIndex = deposits.length;
             deposits.push(Deposit(payable(msg.sender), amount, tokenAddress));
-            emit DepositMade(msg.sender, depositIndex, amount);
+            emit DepositMade(msg.sender, depositIndex, amount, tokenAddress);
 
         }
     }
@@ -63,6 +63,7 @@ contract DepositVault is EIP712 {
         require(signer == depositToWithdraw.depositor, "Invalid signature");
         require(!usedWithdrawalHashes[withdrawalHash], "Withdrawal has already been executed");
         require(amount == depositToWithdraw.amount, "Withdrawal amount must match deposit amount");
+        require(tokenAddress == depositToWithdraw.tokenAddress, "Withdrawal token address must match deposit token address");
 
         usedWithdrawalHashes[withdrawalHash] = true;
         depositToWithdraw.amount = 0;
@@ -82,6 +83,7 @@ contract DepositVault is EIP712 {
         Deposit storage depositToWithdraw = deposits[depositIndex];
         require(depositToWithdraw.depositor == msg.sender, "Only the depositor can withdraw their deposit");
         require(depositToWithdraw.amount > 0, "Deposit has already been withdrawn");
+        require(tokenAddress == depositToWithdraw.tokenAddress, "Withdrawal token address must match deposit token address");
 
         uint256 amount = depositToWithdraw.amount;
         depositToWithdraw.amount = 0;
@@ -92,7 +94,6 @@ contract DepositVault is EIP712 {
             IERC20 token = IERC20(tokenAddress);
             token.transfer(depositToWithdraw.depositor, amount);
         }
-
 
         emit WithdrawalMade(depositToWithdraw.depositor, amount);
     }
