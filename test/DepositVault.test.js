@@ -104,13 +104,7 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(
-                  depositAmount,
-                  nonce,
-                  signature,
-                  addr3.address,
-                  ZEROADDRESS
-               )
+               .withdraw(depositAmount, nonce, signature, addr3.address)
          )
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr3.address, depositAmount);
@@ -141,13 +135,7 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(
-                  depositAmount,
-                  nonce,
-                  signature,
-                  addr3.address,
-                  erc20.address
-               )
+               .withdraw(depositAmount, nonce, signature, addr3.address)
          )
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr3.address, depositAmount);
@@ -168,13 +156,7 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(
-                  depositAmount,
-                  nonce,
-                  signature,
-                  addr2.address,
-                  ZEROADDRESS
-               )
+               .withdraw(depositAmount, nonce, signature, addr2.address)
          ).to.be.revertedWith('Invalid deposit index');
       });
 
@@ -189,13 +171,7 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(
-                  depositAmount,
-                  nonce,
-                  signature,
-                  addr2.address,
-                  ZEROADDRESS
-               )
+               .withdraw(depositAmount, nonce, signature, addr2.address)
          ).to.be.revertedWith('Invalid signature');
       });
 
@@ -216,13 +192,7 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(
-                  withdrawalAmount,
-                  nonce,
-                  signature,
-                  addr2.address,
-                  ZEROADDRESS
-               )
+               .withdraw(withdrawalAmount, nonce, signature, addr2.address)
          ).to.be.revertedWith('Withdrawal amount must match deposit amount');
       });
 
@@ -237,25 +207,13 @@ describe('DepositVault', function () {
          // Execute the first withdrawal
          await depositVault
             .connect(addr2)
-            .withdraw(
-               depositAmount,
-               nonce,
-               signature,
-               addr2.address,
-               ZEROADDRESS
-            );
+            .withdraw(depositAmount, nonce, signature, addr2.address);
 
          // Attempt to execute the same withdrawal again
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(
-                  depositAmount,
-                  nonce,
-                  signature,
-                  addr2.address,
-                  ZEROADDRESS
-               )
+               .withdraw(depositAmount, nonce, signature, addr2.address)
          ).to.be.revertedWith('Withdrawal has already been executed');
       });
    });
@@ -267,9 +225,7 @@ describe('DepositVault', function () {
             .connect(addr1)
             .deposit(0, ZEROADDRESS, { value: depositAmount });
 
-         await expect(
-            depositVault.connect(addr1).withdrawDeposit(0, ZEROADDRESS)
-         )
+         await expect(depositVault.connect(addr1).withdrawDeposit(0))
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr1.address, depositAmount);
 
@@ -288,9 +244,7 @@ describe('DepositVault', function () {
             .connect(addr1)
             .deposit(depositAmount, erc20.address);
 
-         await expect(
-            depositVault.connect(addr1).withdrawDeposit(0, erc20.address)
-         )
+         await expect(depositVault.connect(addr1).withdrawDeposit(0))
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr1.address, depositAmount);
 
@@ -303,7 +257,7 @@ describe('DepositVault', function () {
             .deposit(0, ZEROADDRESS, { value: depositAmount });
 
          await expect(
-            depositVault.connect(addr2).withdrawDeposit(0, ZEROADDRESS)
+            depositVault.connect(addr2).withdrawDeposit(0)
          ).to.be.revertedWith('Only the depositor can withdraw their deposit');
 
          expect((await depositVault.deposits(0)).amount).to.equal(

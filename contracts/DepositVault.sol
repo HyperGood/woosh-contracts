@@ -7,9 +7,11 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 contract DepositVault is EIP712 {
     using ECDSA for bytes32;
+    using SafeERC20 for IERC20;
 
     struct Deposit {
         address payable depositor;
@@ -34,7 +36,7 @@ contract DepositVault is EIP712 {
 
     function deposit(uint256 amount, address tokenAddress) public payable {
         require(amount > 0 || msg.value > 0, "Deposit amount must be greater than 0");
-        if(msg.value > 0){
+        if(msg.value > 0) {
             require(tokenAddress == address(0), "Token address must be 0x0 for ETH deposits");
             uint256 depositIndex = deposits.length;
             deposits.push(Deposit(payable(msg.sender), msg.value, tokenAddress));
@@ -42,7 +44,7 @@ contract DepositVault is EIP712 {
         } else {
             require(tokenAddress != address(0), "Token address must not be 0x0 for token deposits");
             IERC20 token = IERC20(tokenAddress);
-            token.transferFrom(msg.sender, address(this), amount);
+            token.safeTransferFrom(msg.sender, address(this), amount);
             uint256 depositIndex = deposits.length;
             deposits.push(Deposit(payable(msg.sender), amount, tokenAddress));
             emit DepositMade(msg.sender, depositIndex, amount, tokenAddress);
@@ -54,7 +56,7 @@ contract DepositVault is EIP712 {
         return _hashTypedDataV4(keccak256(abi.encode(WITHDRAWAL_TYPEHASH, withdrawal.amount, withdrawal.nonce)));
     }
 
-    function withdraw(uint256 amount, uint256 nonce, bytes memory signature, address payable recipient, address tokenAddress) public {
+    function withdraw(uint256 amount, uint256 nonce, bytes memory signature, address payable recipient) public {
         require(nonce < deposits.length, "Invalid deposit index");
         Deposit storage depositToWithdraw = deposits[nonce];
         bytes32 withdrawalHash = getWithdrawalHash(Withdrawal(amount, nonce));
@@ -62,36 +64,34 @@ contract DepositVault is EIP712 {
         require(signer == depositToWithdraw.depositor, "Invalid signature");
         require(!usedWithdrawalHashes[withdrawalHash], "Withdrawal has already been executed");
         require(amount == depositToWithdraw.amount, "Withdrawal amount must match deposit amount");
-        require(tokenAddress == depositToWithdraw.tokenAddress, "Withdrawal token address must match deposit token address");
-
+      
         usedWithdrawalHashes[withdrawalHash] = true;
         depositToWithdraw.amount = 0;
         
-        if(tokenAddress == address(0)){
+        if(depositToWithdraw.tokenAddress == address(0)){
             recipient.transfer(amount);
         } else {
-            IERC20 token = IERC20(tokenAddress);
-            token.transfer(recipient, amount);
+            IERC20 token = IERC20(depositToWithdraw.tokenAddress);
+            token.safeTransfer(recipient, amount);
         }
 
         emit WithdrawalMade(recipient, amount);
     }
 
-    function withdrawDeposit(uint256 depositIndex, address tokenAddress) public {
+    function withdrawDeposit(uint256 depositIndex) public {
         require(depositIndex < deposits.length, "Invalid deposit index");
         Deposit storage depositToWithdraw = deposits[depositIndex];
         require(depositToWithdraw.depositor == msg.sender, "Only the depositor can withdraw their deposit");
         require(depositToWithdraw.amount > 0, "Deposit has already been withdrawn");
-        require(tokenAddress == depositToWithdraw.tokenAddress, "Withdrawal token address must match deposit token address");
 
         uint256 amount = depositToWithdraw.amount;
         depositToWithdraw.amount = 0;
 
-        if(tokenAddress == address(0)){
+        if(depositToWithdraw.tokenAddress == address(0)){
             depositToWithdraw.depositor.transfer(amount);
         } else {
-            IERC20 token = IERC20(tokenAddress);
-            token.transfer(depositToWithdraw.depositor, amount);
+            IERC20 token = IERC20(depositToWithdraw.tokenAddress);
+            token.safeTransfer(depositToWithdraw.depositor, amount);
         }
 
         emit WithdrawalMade(depositToWithdraw.depositor, amount);
