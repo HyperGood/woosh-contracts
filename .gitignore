@@ -11,3 +11,4 @@ artifacts
 gas-report.txt
 coverage
 coverage.json
+gas-diff.txt
