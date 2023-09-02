@@ -35,20 +35,19 @@ contract DepositVault is EIP712 {
     constructor(string memory domainName, string memory domainVersion) EIP712(domainName, domainVersion) {}
 
     function deposit(uint256 amount, address tokenAddress) public payable {
-        require(amount > 0 || msg.value > 0, "Deposit amount must be greater than 0");
-        if(msg.value > 0) {
+        require(amount !=  0 || msg.value != 0, "Deposit amount must be greater than 0");
+        if(msg.value != 0) {
             require(tokenAddress == address(0), "Token address must be 0x0 for ETH deposits");
             uint256 depositIndex = deposits.length;
             deposits.push(Deposit(payable(msg.sender), msg.value, tokenAddress));
             emit DepositMade(msg.sender, depositIndex, msg.value, tokenAddress);
         } else {
             require(tokenAddress != address(0), "Token address must not be 0x0 for token deposits");
-            IERC20 token = IERC20(tokenAddress);
-            token.safeTransferFrom(msg.sender, address(this), amount);
             uint256 depositIndex = deposits.length;
             deposits.push(Deposit(payable(msg.sender), amount, tokenAddress));
+            IERC20 token = IERC20(tokenAddress);
+            token.safeTransferFrom(msg.sender, address(this), amount);
             emit DepositMade(msg.sender, depositIndex, amount, tokenAddress);
-
         }
     }
 
@@ -69,7 +68,8 @@ contract DepositVault is EIP712 {
         depositToWithdraw.amount = 0;
         
         if(depositToWithdraw.tokenAddress == address(0)){
-            recipient.transfer(amount);
+            (bool success, ) = recipient.call{value: amount}("");
+            require(success, "Ether transfer failed");
         } else {
             IERC20 token = IERC20(depositToWithdraw.tokenAddress);
             token.safeTransfer(recipient, amount);
@@ -82,13 +82,14 @@ contract DepositVault is EIP712 {
         require(depositIndex < deposits.length, "Invalid deposit index");
         Deposit storage depositToWithdraw = deposits[depositIndex];
         require(depositToWithdraw.depositor == msg.sender, "Only the depositor can withdraw their deposit");
-        require(depositToWithdraw.amount > 0, "Deposit has already been withdrawn");
+        require(depositToWithdraw.amount != 0, "Deposit has already been withdrawn");
 
         uint256 amount = depositToWithdraw.amount;
         depositToWithdraw.amount = 0;
 
         if(depositToWithdraw.tokenAddress == address(0)){
-            depositToWithdraw.depositor.transfer(amount);
+            (bool success, ) = depositToWithdraw.depositor.call{value: amount}("");
+            require(success, "Ether transfer failed");
         } else {
             IERC20 token = IERC20(depositToWithdraw.tokenAddress);
             token.safeTransfer(depositToWithdraw.depositor, amount);

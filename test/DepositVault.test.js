@@ -79,6 +79,7 @@ describe('DepositVault', function () {
 
          const deposit = await depositVault.deposits(0);
          expect(deposit.depositor).to.equal(addr1.address);
+         console.log('Depositor: ', deposit.depositor);
          expect(deposit.amount).to.equal(depositAmount);
       });
 
