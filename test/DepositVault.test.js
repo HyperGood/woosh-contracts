@@ -53,13 +53,16 @@ describe('DepositVault', function () {
 
          const deposit = await depositVault.deposits(0);
          expect(deposit.depositor).to.equal(addr1.address);
-         expect(deposit.amount).to.equal(depositAmount);
+         expect(deposit.balance).to.equal(depositAmount);
       });
 
       it('should not allow a deposit with zero Ether', async function () {
          await expect(
             depositVault.connect(addr1).deposit(0, ZEROADDRESS, { value: 0 })
-         ).to.be.revertedWith('Deposit amount must be greater than 0');
+         ).to.be.revertedWithCustomError(
+            depositVault,
+            'DepositAmountMustBeGreaterThanZero'
+         );
       });
 
       it('should desposit an ERC-20 and emit DepositMade event', async function () {
@@ -79,8 +82,7 @@ describe('DepositVault', function () {
 
          const deposit = await depositVault.deposits(0);
          expect(deposit.depositor).to.equal(addr1.address);
-         console.log('Depositor: ', deposit.depositor);
-         expect(deposit.amount).to.equal(depositAmount);
+         expect(deposit.balance).to.equal(depositAmount);
       });
 
       it('should not allow a deposit with zero token amount', async function () {
@@ -88,7 +90,10 @@ describe('DepositVault', function () {
          const erc20 = await ERC20.deploy();
          await expect(
             depositVault.connect(addr1).deposit(0, erc20.address)
-         ).to.be.revertedWith('Deposit amount must be greater than 0');
+         ).to.be.revertedWithCustomError(
+            depositVault,
+            'DepositAmountMustBeGreaterThanZero'
+         );
       });
    });
 
@@ -105,12 +110,12 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(depositAmount, nonce, signature, addr3.address)
+               .withdraw(nonce, signature, addr3.address)
          )
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr3.address, depositAmount);
 
-         expect((await depositVault.deposits(0)).amount).to.equal(0);
+         expect((await depositVault.deposits(0)).balance).to.equal(0);
          expect(initialRecipientBalance.add(depositAmount)).to.equal(
             await addr3.getBalance()
          );
@@ -136,12 +141,12 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(depositAmount, nonce, signature, addr3.address)
+               .withdraw(nonce, signature, addr3.address)
          )
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr3.address, depositAmount);
 
-         expect((await depositVault.deposits(0)).amount).to.equal(0);
+         expect((await depositVault.deposits(0)).balance).to.equal(0);
          expect(initialRecipientBalance.add(depositAmount)).to.equal(
             await erc20.balanceOf(addr3.address)
          );
@@ -157,8 +162,8 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(depositAmount, nonce, signature, addr2.address)
-         ).to.be.revertedWith('Invalid deposit index');
+               .withdraw(nonce, signature, addr2.address)
+         ).to.be.revertedWithCustomError(depositVault, 'InvalidDepositIndex');
       });
 
       it('should not allow a withdrawal with an invalid signature', async function () {
@@ -172,29 +177,8 @@ describe('DepositVault', function () {
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(depositAmount, nonce, signature, addr2.address)
-         ).to.be.revertedWith('Invalid signature');
-      });
-
-      it('should not allow a withdrawal with a mismatched amount', async function () {
-         const depositAmount = ethers.utils.parseEther('1');
-         const withdrawalAmount = ethers.utils.parseEther('0.5'); // Mismatched withdrawal amount
-
-         await depositVault
-            .connect(addr1)
-            .deposit(0, ZEROADDRESS, { value: depositAmount });
-         const nonce = 0;
-
-         const signature = await createSignature(
-            addr1,
-            nonce,
-            withdrawalAmount
-         );
-         await expect(
-            depositVault
-               .connect(addr2)
-               .withdraw(withdrawalAmount, nonce, signature, addr2.address)
-         ).to.be.revertedWith('Withdrawal amount must match deposit amount');
+               .withdraw(nonce, signature, addr2.address)
+         ).to.be.revertedWithCustomError(depositVault, 'InvalidSignature');
       });
 
       it('should not allow a withdrawal that has already been executed', async function () {
@@ -208,14 +192,17 @@ describe('DepositVault', function () {
          // Execute the first withdrawal
          await depositVault
             .connect(addr2)
-            .withdraw(depositAmount, nonce, signature, addr2.address);
+            .withdraw(nonce, signature, addr2.address);
 
          // Attempt to execute the same withdrawal again
          await expect(
             depositVault
                .connect(addr2)
-               .withdraw(depositAmount, nonce, signature, addr2.address)
-         ).to.be.revertedWith('Withdrawal has already been executed');
+               .withdraw(nonce, signature, addr2.address)
+         ).to.be.revertedWithCustomError(
+            depositVault,
+            'WithdrawalHasAlreadyBeenExecuted'
+         );
       });
    });
 
@@ -230,7 +217,7 @@ describe('DepositVault', function () {
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr1.address, depositAmount);
 
-         expect((await depositVault.deposits(0)).amount).to.equal(0);
+         expect((await depositVault.deposits(0)).balance).to.equal(0);
       });
 
       it('should allow the depositor to withdraw their ERC-20 deposit', async function () {
@@ -249,8 +236,9 @@ describe('DepositVault', function () {
             .to.emit(depositVault, 'WithdrawalMade')
             .withArgs(addr1.address, depositAmount);
 
-         expect((await depositVault.deposits(0)).amount).to.equal(0);
+         expect((await depositVault.deposits(0)).balance).to.equal(0);
       });
+
       it('should not allow to withdraw the deposit to someone different from the depositor', async function () {
          const depositAmount = ethers.utils.parseEther('1');
          await depositVault
@@ -259,9 +247,9 @@ describe('DepositVault', function () {
 
          await expect(
             depositVault.connect(addr2).withdrawDeposit(0)
-         ).to.be.revertedWith('Only the depositor can withdraw their deposit');
+         ).to.be.revertedWithCustomError(depositVault, 'OnlyDepositor');
 
-         expect((await depositVault.deposits(0)).amount).to.equal(
+         expect((await depositVault.deposits(0)).balance).to.equal(
             depositAmount
          );
       });
