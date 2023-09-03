@@ -61,7 +61,7 @@ describe('DepositVault', function () {
             depositVault.connect(addr1).deposit(0, ZEROADDRESS, { value: 0 })
          ).to.be.revertedWithCustomError(
             depositVault,
-            'DepositAmountMustBeGreaterThanZero'
+            'DepositVault__DepositAmountMustBeGreaterThanZero'
          );
       });
 
@@ -92,7 +92,7 @@ describe('DepositVault', function () {
             depositVault.connect(addr1).deposit(0, erc20.address)
          ).to.be.revertedWithCustomError(
             depositVault,
-            'DepositAmountMustBeGreaterThanZero'
+            'DepositVault__DepositAmountMustBeGreaterThanZero'
          );
       });
    });
@@ -163,7 +163,10 @@ describe('DepositVault', function () {
             depositVault
                .connect(addr2)
                .withdraw(nonce, signature, addr2.address)
-         ).to.be.revertedWithCustomError(depositVault, 'InvalidDepositIndex');
+         ).to.be.revertedWithCustomError(
+            depositVault,
+            'DepositVault__InvalidDepositIndex'
+         );
       });
 
       it('should not allow a withdrawal with an invalid signature', async function () {
@@ -178,7 +181,10 @@ describe('DepositVault', function () {
             depositVault
                .connect(addr2)
                .withdraw(nonce, signature, addr2.address)
-         ).to.be.revertedWithCustomError(depositVault, 'InvalidSignature');
+         ).to.be.revertedWithCustomError(
+            depositVault,
+            'DepositVault__InvalidSignature'
+         );
       });
 
       it('should not allow a withdrawal that has already been executed', async function () {
@@ -201,7 +207,7 @@ describe('DepositVault', function () {
                .withdraw(nonce, signature, addr2.address)
          ).to.be.revertedWithCustomError(
             depositVault,
-            'WithdrawalHasAlreadyBeenExecuted'
+            'DepositVault__WithdrawalHasAlreadyBeenExecuted'
          );
       });
    });
@@ -247,7 +253,10 @@ describe('DepositVault', function () {
 
          await expect(
             depositVault.connect(addr2).withdrawDeposit(0)
-         ).to.be.revertedWithCustomError(depositVault, 'OnlyDepositor');
+         ).to.be.revertedWithCustomError(
+            depositVault,
+            'DepositVault__OnlyDepositor'
+         );
 
          expect((await depositVault.deposits(0)).balance).to.equal(
             depositAmount
