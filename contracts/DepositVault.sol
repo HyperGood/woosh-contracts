@@ -31,14 +31,14 @@ contract DepositVault is EIP712 {
 
     struct Withdrawal {
         uint256 amount;
-        uint256 nonce;
+        uint256 depositIndex;
     }
 
     Deposit[] public deposits;
 
     mapping(bytes32 => bool) public usedWithdrawalHashes;
     bytes32 private constant WITHDRAWAL_TYPEHASH =
-        keccak256("Withdrawal(uint256 amount,uint256 nonce)");
+        keccak256("Withdrawal(uint256 amount,uint256 depositIndex)");
 
     event DepositMade(
         address indexed depositor,
@@ -147,7 +147,7 @@ contract DepositVault is EIP712 {
                     abi.encode(
                         WITHDRAWAL_TYPEHASH,
                         withdrawal.amount,
-                        withdrawal.nonce
+                        withdrawal.depositIndex
                     )
                 )
             );
