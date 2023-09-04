@@ -11,7 +11,7 @@ describe('DepositVault', function () {
       depositVault = await DepositVault.deploy('DepositVault', '1.0.0');
    });
 
-   async function createSignature(signer, nonce, depositAmount) {
+   async function createSignature(signer, depositIndex, depositAmount) {
       const message = {
          domain: {
             name: 'DepositVault',
@@ -21,12 +21,12 @@ describe('DepositVault', function () {
          },
          value: {
             amount: depositAmount,
-            nonce: nonce,
+            depositIndex: depositIndex,
          },
          types: {
             Withdrawal: [
                { name: 'amount', type: 'uint256' },
-               { name: 'nonce', type: 'uint256' },
+               { name: 'depositIndex', type: 'uint256' },
             ],
          },
       };
