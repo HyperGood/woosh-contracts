@@ -159,10 +159,7 @@ contract DepositVault is EIP712 {
     ) internal returns (bool success, uint256 balance) {
         IERC20 token = IERC20(tokenAddress);
         uint256 initialBalance = token.balanceOf(address(this));
-        require(
-            token.transferFrom(msg.sender, address(this), amount),
-            "Token transfer failed"
-        );
+        token.safeTransferFrom(msg.sender, address(this), amount);
         uint256 depositedAmount = token.balanceOf(address(this)) -
             initialBalance;
         return (true, depositedAmount);
