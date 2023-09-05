@@ -69,11 +69,10 @@ contract DepositVault is EIP712 {
             if (isAddressZero(tokenAddress))
                 revert DepositVault__IsZeroAddress();
             uint256 depositIndex = deposits.length;
-            (bool success, uint256 balance) = depositTokens(
-                amount,
-                tokenAddress
-            );
-            if (!success) revert DepositVault__TransferFailed();
+            IERC20 token = IERC20(tokenAddress);
+            uint256 initialBalance = token.balanceOf(address(this));
+            token.safeTransferFrom(msg.sender, address(this), amount);
+            uint256 balance = token.balanceOf(address(this)) - initialBalance;
             deposits.push(Deposit(payable(msg.sender), tokenAddress, balance));
             emit DepositMade(msg.sender, depositIndex, balance, tokenAddress);
         }
@@ -151,18 +150,6 @@ contract DepositVault is EIP712 {
                     )
                 )
             );
-    }
-
-    function depositTokens(
-        uint256 amount,
-        address tokenAddress
-    ) internal returns (bool success, uint256 balance) {
-        IERC20 token = IERC20(tokenAddress);
-        uint256 initialBalance = token.balanceOf(address(this));
-        token.safeTransferFrom(msg.sender, address(this), amount);
-        uint256 depositedAmount = token.balanceOf(address(this)) -
-            initialBalance;
-        return (true, depositedAmount);
     }
 
     function isAddressZero(address _addr) internal pure returns (bool) {
