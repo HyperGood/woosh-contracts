@@ -27,6 +27,7 @@ const config: HardhatUserConfig = {
          chainId: 420,
       },
    },
+
    gasReporter: {
       enabled: true,
       outputFile: 'gas-report.txt',
