@@ -31,11 +31,17 @@ describe('DepositVault', function () {
          },
       };
 
-      const signature = await signer._signTypedData(
+      const signature = ethers.utils._TypedDataEncoder.hash(
          message.domain,
          message.types,
-         message.value
+         message.message
       );
+
+      // const signature = await signer._signTypedData(
+      //    message.domain,
+      //    message.types,
+      //    message.value
+      // );
       return signature;
    }
 
@@ -106,6 +112,7 @@ describe('DepositVault', function () {
 
          const nonce = 0;
          const signature = await createSignature(addr1, nonce, depositAmount);
+         console.log('signature', signature);
          const initialRecipientBalance = await addr3.getBalance();
          await expect(
             depositVault
