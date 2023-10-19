@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "local-deploy": "hardhat run --network localhost scripts/deploy.ts"
+    "local-deploy": "hardhat run --network localhost scripts/deploy.ts",
+    "test": "hardhat test"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",
