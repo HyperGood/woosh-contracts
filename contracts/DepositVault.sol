@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -19,6 +19,10 @@ error DepositVault__OnlyDepositor();
 ///@author @Temo_RH https://github.com/ktemo
 ///@notice This contract allows users to deposit ETH or ERC20 tokens and withdraw them using a signature
 
+interface IERC1271Wallet {
+  function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4 magicValue);
+}
+
 contract DepositVault is EIP712 {
     using ECDSA for bytes32;
     using SafeERC20 for IERC20;
@@ -37,8 +41,10 @@ contract DepositVault is EIP712 {
     Deposit[] public deposits;
 
     mapping(bytes32 => bool) public usedWithdrawalHashes;
-    bytes32 private constant WITHDRAWAL_TYPEHASH =
+    bytes32 public WITHDRAWAL_TYPEHASH =
         keccak256("Withdrawal(uint256 amount,uint256 depositIndex)");
+
+    bytes4 private constant ERC1271_SUCCESS = 0x1626ba7e;
 
     event DepositMade(
         address indexed depositor,
@@ -92,8 +98,9 @@ contract DepositVault is EIP712 {
             Withdrawal(depositToWithdraw.balance, depositIndex)
         );
         address signer = withdrawalHash.recover(signature);
-        if (signer != depositToWithdraw.depositor)
+        if (signer != depositToWithdraw.depositor && !isValidUniversalSig(depositToWithdraw.depositor, withdrawalHash, signature))
             revert DepositVault__InvalidSignature();
+
         if (usedWithdrawalHashes[withdrawalHash])
             revert DepositVault__WithdrawalHasAlreadyBeenExecuted();
 
@@ -160,4 +167,43 @@ contract DepositVault is EIP712 {
         }
         return isZero;
     }
+
+  /**
+   * @notice Verifies that the signature is valid for that signer and hash
+   */
+  function isValidUniversalSig(
+    address _signer,
+    bytes32 _hash,
+    bytes memory _signature
+  ) public view returns (bool) {
+    bytes memory contractCode = address(_signer).code;
+    // The order here is striclty defined in https://eips.ethereum.org/EIPS/eip-6492
+    // - ERC-6492 suffix check and verification first, while being permissive in case the contract is already deployed so as to not invalidate old sigs
+    // - ERC-1271 verification if there's contract code
+    // - finally, ecrecover
+    if (contractCode.length > 0) {
+      return IERC1271Wallet(_signer).isValidSignature(_hash, _signature) == ERC1271_SUCCESS;
+    } 
+
+    // ecrecover verification
+    require(_signature.length == 65, 'SignatureValidator#recoverSigner: invalid signature length');
+    bytes32[3] memory _sig;
+    assembly { 
+      _sig := _signature
+    }
+    bytes32 r = _sig[1];
+    bytes32 s = _sig[2];
+    uint8 v = uint8(_signature[64]);
+    if (v != 27 && v != 28) {
+      revert('SignatureValidator#recoverSigner: invalid signature v value');
+    }
+    return ecrecover(_hash, v, r, s) == _signer;
+  }
+
+  function trailingBytes32(bytes memory data) internal pure returns (bytes32 ret) {
+      require(data.length>=32);
+      assembly {
+          ret := mload(add(data,mload(data)))
+      }
+  }
 }
