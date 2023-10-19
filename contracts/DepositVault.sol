@@ -5,9 +5,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IERC1271.sol";
-
-import "hardhat/console.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 error DepositVault__DepositAmountMustBeGreaterThanZero();
 error DepositVault__IsZeroAddress();
@@ -36,17 +34,6 @@ contract DepositVault is EIP712 {
     struct Withdrawal {
         uint256 amount;
         uint256 depositIndex;
-    }
-    //Not sure how this is used
-    enum SignatureMode {
-        EIP712,
-        EthSign,
-        SmartWallet,
-        Spoof,
-        Schnorr,
-        Multisig,
-        // WARNING: must always be last
-        LastUnused
     }
 
     Deposit[] public deposits;
@@ -106,12 +93,20 @@ contract DepositVault is EIP712 {
         bytes32 withdrawalHash = getWithdrawalHash(
             Withdrawal(depositToWithdraw.balance, depositIndex)
         );
+        address signer = withdrawalHash.recover(signature);
 
-        //address signer = withdrawalHash.recover(signature);
-        address signer = recoverAddress(signature);
-
-        if (signer != depositToWithdraw.depositor)
+        if (signer != depositToWithdraw.depositor && signer != address(0)) {
             revert DepositVault__InvalidSignature();
+        }
+
+        if (signer == address(0)) {
+            bytes4 res = IERC1271(depositToWithdraw.depositor).isValidSignature(
+                withdrawalHash,
+                signature
+            );
+            if (res != 0x1626ba7e) revert DepositVault__InvalidSignature();
+        }
+
         if (usedWithdrawalHashes[withdrawalHash])
             revert DepositVault__WithdrawalHasAlreadyBeenExecuted();
 
@@ -177,39 +172,5 @@ contract DepositVault is EIP712 {
             isZero := eq(_addr, mload(0))
         }
         return isZero;
-    }
-
-    //Recover the address from a signature. Both EOAs and SCW
-    function recoverAddress(
-        bytes memory signature
-    ) internal view returns (address) {
-        if (signature.length < 1) revert DepositVault__InvalidSignatureLength();
-
-        uint8 modeRaw;
-        //modeRaw = last char from sig
-        unchecked {
-            modeRaw = uint8(signature[signature.length - 1]);
-        }
-        console.log(modeRaw);
-        //Ensure we are using a valid mode
-        if (modeRaw > uint8(SignatureMode.LastUnused))
-            revert DepositVault__InvalidSignature();
-        //get the signature mode
-        SignatureMode mode = SignatureMode(modeRaw);
-
-        // {r}{s}{v}{mode}
-        if (mode == SignatureMode.EIP712 || mode == SignatureMode.EthSign) {
-            console.log("Signature Mode is 712 or Eth Sign");
-        } else if (mode == SignatureMode.Schnorr) {
-            console.log("Signature Mode is Schnorr");
-        } else if (mode == SignatureMode.Multisig) {
-            console.log("Signature Mode is Multisig");
-        } else if (mode == SignatureMode.SmartWallet) {
-            console.log("Signature Mode is SmartWallet");
-        } else if (mode == SignatureMode.Spoof) {
-            console.log("Signature Mode is Spoof");
-        }
-        // should be impossible to get here
-        return address(0);
     }
 }
