@@ -7,9 +7,15 @@ import '@typechain/hardhat';
 import '@nomiclabs/hardhat-etherscan';
 
 const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY || 'key';
-const OP_GOERLI_RPC_URL =
-   process.env.OP_GOERLI_RPC_URL ||
-   'https://opt-goerli.g.alchemy.com/v2/YOUR-API-KEY';
+const OP_SEPOLIA_RPC_URL =
+   process.env.OP_SEPOLIA_RPC_URL ||
+   'https://opt-sepolia.g.alchemy.com/v2/YOUR-API-KEY';
+const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || '';
+const OP_RPC_URL =
+   process.env.OP_RPC_URL ||
+   'https://opt-mainnet.g.alchemy.com/v2/YOUR-API-KEY';
+const BASE_RPC_URL = process.env.BASE_RPC_URL || '';
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL || '';
 const MNEMONIC = process.env.MNEMONIC || 'your mnemonic';
 const REPORT_GAS = process.env.REPORT_GAS || false;
 // const ETHERSCAN_API_KEY =
@@ -21,10 +27,36 @@ const config: HardhatUserConfig = {
       localhost: {
          chainId: 31337,
       },
-      opGoerli: {
-         url: OP_GOERLI_RPC_URL,
+      sepolia: {
+         url: SEPOLIA_RPC_URL,
          accounts: { mnemonic: MNEMONIC },
-         chainId: 420,
+         chainId: 11155111,
+      },
+      opSepolia: {
+         url: OP_SEPOLIA_RPC_URL,
+         accounts: { mnemonic: MNEMONIC },
+         chainId: 11155420,
+      },
+      baseSepolia: {
+         url: BASE_SEPOLIA_RPC_URL,
+         accounts: { mnemonic: MNEMONIC },
+         chainId: 84532,
+      },
+      'blast-sepolia': {
+         url: 'https://sepolia.blast.io',
+         accounts: { mnemonic: MNEMONIC },
+         gasPrice: 1000000000,
+         chainId: 168587773,
+      },
+      optimism: {
+         url: OP_RPC_URL,
+         accounts: { mnemonic: MNEMONIC },
+         chainId: 10,
+      },
+      base: {
+         url: BASE_RPC_URL,
+         accounts: { mnemonic: MNEMONIC },
+         chainId: 8453,
       },
    },
 
